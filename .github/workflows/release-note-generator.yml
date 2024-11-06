@@ -50,10 +50,10 @@ jobs:
               continue 
             fi
             if [[ "$COMMIT" =~ fix/([0-9]+)- ]]; then
-              TICKET="#${BASH_REMATCH[1]}"
+              TICKET="- #${BASH_REMATCH[1]}"
               FIXES="${FIXES}${TICKET}\n"
             elif [[ "$COMMIT" =~ feat/([0-9]+)- ]]; then
-              TICKET="#${BASH_REMATCH[1]}"
+              TICKET="- #${BASH_REMATCH[1]}"
               FEATURES="${FEATURES}${TICKET}\n"
             fi
           done <<< "$COMMITS"
@@ -73,7 +73,13 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `###FEATURES \n ${{env.features}} \n ### FIXES \n ${{env.fixes}}`
+                body: `
+                ### 🚀 Features
+                ${{env.features}}
+                
+                ### 🐞 Fixes 
+                ${{env.fixes}}
+                `
             })
           
 
