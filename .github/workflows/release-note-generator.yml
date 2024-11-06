@@ -45,7 +45,7 @@ jobs:
         run: |
           FEATURES=""
           FIXES=""
-          COMMITS=$(${{ env.commits }})
+          COMMITS="${{ env.commits }}"
           
           while read -r COMMIT; do
             if [[ ! "$COMMIT" =~ 'Merge pull request' ]]; then 
