@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     ## Run job only on release branches
     if:  startsWith(github.head_ref, 'release/')
+    env:
+      MAIN_BRANCH: main
     
     steps:
       - name: Checkout code
@@ -25,25 +27,25 @@ jobs:
       - name: Get list of merged commits from release branch
         id: get_commits
         run: |
-          # Get the branch being merged (e.g., release/2024-Q4)
+          # Get the branch being merged (e.g., release/1.0.0)
           RELEASE_BRANCH="${{ github.event.pull_request.head.ref }}"
-          MAIN_BRANCH="main"
           
           # Find merge commits between release branch and master
-          git fetch origin
+          git fetch origin $MAIN_BRANCH && git fetch origin $RELEASE_BRANCH
           COMMITS=$(git log origin/$MAIN_BRANCH..origin/$RELEASE_BRANCH --merges --pretty=format:"%H %s")
-          
-          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+
+          # Writing to env
+          echo "commits<<EOF"  >> $GITHUB_ENV
+          echo "$COMMITS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
 
       - name: Generate Release Notes
         id: generate_notes
         run: |
-          COMMITS=${{steps.get_commits.outputs.commits}}
-          echo $COMMITS
-          
           FEATURES=""
           FIXES=""
+          COMMITS=${{ env.commits }}
           
           while read -r COMMIT; do
             if [[ ! "$COMMIT" =~ 'Merge pull request' ]]; then 
