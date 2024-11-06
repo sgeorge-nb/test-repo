@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened]
+    types: [opened, labeled, unlabeled]
     
 
 jobs:      
@@ -27,12 +27,13 @@ jobs:
         run: |
           # Get the branch being merged (e.g., release/2024-Q4)
           RELEASE_BRANCH="${{ github.event.pull_request.head.ref }}"
+          MAIN_BRANCH="main"
           
           # Find merge commits between release branch and master
           git fetch origin
-          COMMITS=$(git log origin/master..origin/$RELEASE_BRANCH --merges --pretty=format:"%H %s")
+          COMMITS=$(git log origin/$MAIN_BRANCH..origin/$RELEASE_BRANCH --merges --pretty=format:"%H %s")
           
-          echo "commits=$COMMITchatS" >> $GITHUB_ENV
+          echo "commits=$COMMITS" >> $GITHUB_ENV
 
 
       - name: Generate Release Notes
