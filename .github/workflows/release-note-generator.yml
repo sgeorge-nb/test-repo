@@ -33,15 +33,18 @@ jobs:
           git fetch origin
           COMMITS=$(git log origin/$MAIN_BRANCH..origin/$RELEASE_BRANCH --merges --pretty=format:"%H %s")
           
-          echo "commits=$COMMITS" >> $GITHUB_ENV
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
 
 
       - name: Generate Release Notes
         id: generate_notes
         run: |
+          COMMITS=${{steps.get_commits.outputs.commits}}
+          echo $COMMITS
+          
           FEATURES=""
           FIXES=""
-      
+          
           while read -r COMMIT; do
             if [[ ! "$COMMIT" =~ 'Merge pull request' ]]; then 
               continue 
