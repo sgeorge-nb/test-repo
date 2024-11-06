@@ -61,4 +61,17 @@ jobs:
           echo "features=${FEATURES:-'None'}" >> $GITHUB_ENV
           echo "fixes=${FIXES:-'None'}" >> $GITHUB_ENV
 
+      - name: Add Release notes to PR
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `###FEATURES \n ${{env.features}} \n ### FIXES \n ${{env.fixes}}`
+            })
+          
+
+
      
