@@ -60,13 +60,28 @@ jobs:
               FEATURES="${FEATURES}${TICKET}\n"
             fi
           done <<< "$COMMITS"
+
+          echo $FEATURES
+          echo $FIXES
+
+          # Convert to sorted unique tickets
+          FEATURES=$(echo -e "$FEATURES" | sort -u)
+          FIXES=$(echo -e "$FIXES" | sort -u)
       
-          echo -e $FEATURES
-          echo -e $FIXES
+          echo $FEATURES
+          echo $FIXES
           
-          echo "features=${FEATURES:-'None'}" >> $GITHUB_ENV
-          echo "fixes=${FIXES:-'None'}" >> $GITHUB_ENV
-          echo "release_number=${RELEASE_NUMBER}" >> $GITHUB_ENV
+          # echo "features=${FEATURES:-'None'}" >> $GITHUB_ENV
+          # echo "fixes=${FIXES:-'None'}" >> $GITHUB_ENV
+
+          {
+            echo "features<<EOF"
+            echo "$FEATURES"
+            echo "EOF"
+            echo "fixes<<EOF"
+            echo "$FIXES"
+            echo "EOF"
+          } >> $GITHUB_ENV
 
       - name: Add Release notes to PR
         id: add-notes
@@ -83,9 +98,14 @@ jobs:
       - name: Saving outputs
         id: save_outputs
         run: |
-          echo "features=${{env.features}}" >> $GITHUB_OUTPUT
-          echo "fixes=${{env.fixes}}" >> $GITHUB_OUTPUT
-
+          {
+            echo "features<<EOF"
+            echo "${{ env.features }}"
+            echo "EOF"
+            echo "fixes<<EOF"
+            echo "${{ env.fixes }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
   # Job to tag tickets with release number
   tag-tickets:
@@ -111,8 +131,8 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const releaseNumber = process.env.release_number;
-            const features = process.env.features.split('\\n').filter(Boolean);
-            const fixes = process.env.fixes.split('\\n').filter(Boolean);
+            const features = process.env.features.split('\n').filter(Boolean);
+            const fixes = process.env.fixes.split('\n').filter(Boolean);
             
             console.log(releaseNumber, features, fixes);
 
