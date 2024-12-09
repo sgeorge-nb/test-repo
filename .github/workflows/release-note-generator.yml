@@ -131,8 +131,8 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const releaseNumber = process.env.release_number;
-            const features = process.env.features.split('\\n').filter(Boolean);
-            const fixes = process.env.fixes.split('\\n').filter(Boolean);
+            const features = process.env.features.split('\n').filter(Boolean);
+            const fixes = process.env.fixes.split('\n').filter(Boolean);
             
             console.log(releaseNumber, features, fixes);
 
