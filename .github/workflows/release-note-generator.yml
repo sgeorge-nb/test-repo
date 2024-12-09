@@ -60,6 +60,10 @@ jobs:
               FEATURES="${FEATURES}${TICKET}\n"
             fi
           done <<< "$COMMITS"
+
+          # Convert to sorted unique tickets
+          FEATURES=$(echo -e "$FEATURES" | sort -u)
+          FIXES=$(echo -e "$FIXES" | sort -u)
       
           echo -e $FEATURES
           echo -e $FIXES
