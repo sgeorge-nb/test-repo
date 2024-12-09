@@ -10,12 +10,16 @@ on:
 jobs:      
   release-notes:
     runs-on: ubuntu-latest
-    ## Run job only on release branches
+    # Run job only on release branches
     if:  startsWith(github.head_ref, 'release/')
     # TODO: Make permission more restrictive
     permissions: write-all
+    
     env: 
         MAIN_BRANCH: main
+    outputs:
+      features: ${{ steps.save_outputs.outputs.features }}
+      fixes: ${{ steps.save_outputs.outputs.fixes }}
     
     steps:
       - name: Checkout code
@@ -79,17 +83,20 @@ jobs:
       - name: Saving outputs
         id: save_outputs
         run: |
-          echo "::set-output name=features::${{ env.features }}"
-          echo "::set-output name=fixes::${{ env.fixes }}"
+          echo "features=${{env.features}}" >> $GITHUB_OUTPUT
+          echo "fixes=${{env.fixes}}" >> $GITHUB_OUTPUT
 
 
+  # Job to tag tickets with release number
   tag-tickets:
     runs-on: ubuntu-latest
     needs: release-notes
     permissions: write-all
+    
     env:
       features: ${{ needs.release-notes.outputs.features }}
-      fixes: $ {{ needs.release-notes.outputs.fixes }}
+      fixes: ${{ needs.release-notes.outputs.fixes }}
+      
     steps:
       - name: Extract Release Number
         id: extract-release-number
@@ -104,8 +111,10 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const releaseNumber = process.env.release_number;
-            const features = process.env.features.split('\n').filter(Boolean);
-            const fixes = process.env.fixes.split('\n').filter(Boolean);
+            const features = process.env.features.split('\\n').filter(Boolean);
+            const fixes = process.env.fixes.split('\\n').filter(Boolean);
+            
+            console.log(releaseNumber, features, fixes);
 
             async function tagTickets(tickets, label) {
               for (const ticket of tickets) {
