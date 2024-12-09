@@ -94,9 +94,9 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const releaseNumber = {{ env.release_number }};
-            const features = process.env.features.split('\\n').filter(Boolean);
-            const fixes = process.env.fixes.split('\\n').filter(Boolean);
+            const releaseNumber = process.env.release_number;
+            const features = process.env.features.split('\n').filter(Boolean);
+            const fixes = process.env.fixes.split('\n').filter(Boolean);
 
             async function tagTickets(tickets, label) {
               for (const ticket of tickets) {
