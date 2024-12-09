@@ -107,17 +107,30 @@ jobs:
             const features = process.env.features.split('\n').filter(Boolean);
             const fixes = process.env.fixes.split('\n').filter(Boolean);
 
+            console.log(releaseNumber, features, fixes);
+
             async function tagTickets(tickets, label) {
               for (const ticket of tickets) {
                 const issueNumber = parseInt(ticket.replace(/[^0-9]/g, ''), 10);
-                if (!isNaN(issueNumber)) {
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issueNumber,
-                    labels: [`${releaseNumber}`]
-                  });
+                
+                if(isNaN(issueNumber)) {
+                  return;
                 }
+
+                const { data: existingLabels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                });
+
+                console.log(existingLabels);
+                
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: [{ name: `${releaseNumber}`}]
+                });
               }
             }
 
