@@ -12,22 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     ## Run job only on release branches
     if:  startsWith(github.head_ref, 'release/')
-    env: 
-        MAIN_BRANCH: main
     # TODO: Make permission more restrictive
     permissions: write-all
-
+    env: 
+        MAIN_BRANCH: main
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get list of merged commits from release branch
         id: get_commits
         run: |
           # Get the branch being merged eg: release/1.0.0
           RELEASE_BRANCH="${{ github.event.pull_request.head.ref }}"
-          MAIN_BRANCH="main"
+          MAIN_BRANCH="${{env.MAIN_BRANCH}}"
           
           # Find merge commits between release branch and master
           git fetch origin $MAIN_BRANCH && git fetch origin $RELEASE_BRANCH
