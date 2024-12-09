@@ -1,0 +1,138 @@
+name: Generate Release Notes
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, labeled, unlabeled]
+    
+
+jobs:      
+  release-notes:
+    runs-on: ubuntu-latest
+    # Run job only on release branches
+    if:  startsWith(github.head_ref, 'release/')
+    # TODO: Make permission more restrictive
+    permissions: write-all
+    
+    env: 
+        MAIN_BRANCH: main
+    outputs:
+      features: ${{ steps.save_outputs.outputs.features }}
+      fixes: ${{ steps.save_outputs.outputs.fixes }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get list of merged commits from release branch
+        id: get_commits
+        run: |
+          # Get the branch being merged eg: release/1.0.0
+          RELEASE_BRANCH="${{ github.event.pull_request.head.ref }}"
+          MAIN_BRANCH="${{env.MAIN_BRANCH}}"
+          
+          # Find merge commits between release branch and master
+          git fetch origin $MAIN_BRANCH && git fetch origin $RELEASE_BRANCH
+          COMMITS=$(git log origin/$MAIN_BRANCH..origin/$RELEASE_BRANCH --merges --pretty=format:"%H %s")
+
+          # Write to env
+          echo "commits<<EOF" >> $GITHUB_ENV
+          echo "$COMMITS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Generate Release Notes
+        id: generate_notes
+        run: |
+          FEATURES=""
+          FIXES=""
+          COMMITS="${{env.commits}}"
+      
+          while read -r COMMIT; do
+            if [[ ! "$COMMIT" =~ 'Merge pull request' ]]; then 
+              continue 
+            fi
+            if [[ "$COMMIT" =~ fix/([0-9]+)- ]]; then
+              TICKET="- #${BASH_REMATCH[1]}"
+              FIXES="${FIXES}${TICKET}\n"
+            elif [[ "$COMMIT" =~ feat/([0-9]+)- ]]; then
+              TICKET="- #${BASH_REMATCH[1]}"
+              FEATURES="${FEATURES}${TICKET}\n"
+            fi
+          done <<< "$COMMITS"
+      
+          echo -e $FEATURES
+          echo -e $FIXES
+          
+          echo "features=${FEATURES:-'None'}" >> $GITHUB_ENV
+          echo "fixes=${FIXES:-'None'}" >> $GITHUB_ENV
+          echo "release_number=${RELEASE_NUMBER}" >> $GITHUB_ENV
+
+      - name: Add Release notes to PR
+        id: add-notes
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `### 🚀 Features \n${{env.features}} \n### 🐞 Fixes \n${{env.fixes}}`
+            })
+      - name: Saving outputs
+        id: save_outputs
+        run: |
+          echo "features=${{env.features}}" >> $GITHUB_OUTPUT
+          echo "fixes=${{env.fixes}}" >> $GITHUB_OUTPUT
+
+
+  # Job to tag tickets with release number
+  tag-tickets:
+    runs-on: ubuntu-latest
+    needs: release-notes
+    permissions: write-all
+    
+    env:
+      features: ${{ needs.release-notes.outputs.features }}
+      fixes: ${{ needs.release-notes.outputs.fixes }}
+      
+    steps:
+      - name: Extract Release Number
+        id: extract-release-number
+        run: |
+          RELEASE_BRANCH="${{ github.event.pull_request.head.ref }}"
+          RELEASE_NUMBER=${RELEASE_BRANCH#release/}
+          echo "release_number=$RELEASE_NUMBER" >> $GITHUB_ENV
+          
+      - name: Tag features and fixes in GitHub Projects
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const releaseNumber = process.env.release_number;
+            const features = process.env.features.split('\\n').filter(Boolean);
+            const fixes = process.env.fixes.split('\\n').filter(Boolean);
+            
+            console.log(releaseNumber, features, fixes);
+
+            async function tagTickets(tickets, label) {
+              for (const ticket of tickets) {
+                const issueNumber = parseInt(ticket.replace(/[^0-9]/g, ''), 10);
+                if (!isNaN(issueNumber)) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber,
+                    labels: [`${releaseNumber}`]
+                  });
+                }
+              }
+            }
+
+            await tagTickets(features, 'Feature');
+            await tagTickets(fixes, 'Fix');
+    
+
+
+     
